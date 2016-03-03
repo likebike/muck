@@ -40,7 +40,6 @@ import myke.fabricate
     
 
 MYKEFILE = 'Mykefile'
-SKIP = 'SKIP'
 
 def childEnv(inRoot, relPath, outRoot):
     env = dict(os.environ)
@@ -95,65 +94,48 @@ class _Myker(object):
         self.outRoot = os.path.abspath(outRoot)
         self.cmdsPath = os.path.join(mykeRoot, '.myke_commands')
         self._cmdsCache = None
-        self.fab = _Fab(self.mykeRoot, ignore=r'^\.{1,2}$|^/(dev|proc|sys)/', dirs=['/'], depsname=os.path.join(mykeRoot, '.myke_deps'), debug=debug)  # ignore: . .. /dev/ /proc/ /sys/
+        self.fab = _Fab(self.mykeRoot, ignore=r'^\.{1,2}$|^/(dev|proc|sys)/', dirs=['/'], depsname=os.path.join(mykeRoot, '.myke_deps'), quiet=True, debug=debug)  # ignore: . .. /dev/ /proc/ /sys/
     def writeCommandsCache(self):
         if self._cmdsCache:
-            try:
-                self._cmdsCache[self.hashKey] = myke.fabricate.md5_hasher(self.mykefilePath)
-                with open(self.cmdsPath, 'w') as f: json.dump(self._cmdsCache, f, indent=2, sort_keys=True)
-            finally: self._cmdsCache.pop(self.hashKey)
+            with open(self.cmdsPath, 'w') as f: json.dump(self._cmdsCache, f, indent=2, sort_keys=True)
             os.chmod(self.cmdsPath, stat.S_IRUSR|stat.S_IWUSR|stat.S_IRGRP|stat.S_IWGRP|stat.S_IROTH|stat.S_IWOTH)
     def getCommandsCache(self):
+        curHash = myke.fabricate.md5_hasher(self.mykefilePath)   # This can obviously be optimized by only calculating the hash every several seconds -- not on every request.
         if self._cmdsCache == None:
-            self._cmdsCache = {}
-            try:
-                self._cmdsCache = json.load(open(self.cmdsPath))
-                if self._cmdsCache[self.hashKey] != myke.fabricate.md5_hasher(self.mykefilePath):
-                    # The loaded commands cache is invalid because the Mykefile has been changed.
-                    self._cmdsCache = {}
+            try: self._cmdsCache = json.load(open(self.cmdsPath))
             except: self._cmdsCache = {}
             atexit.register(self.writeCommandsCache)
+        if self._cmdsCache.get(self.hashKey, None) != curHash: self._cmdsCache = {self.hashKey:curHash}
         return self._cmdsCache
     def relPath(self, path):   # I could have just used os.path.relpath, but this implementation is more restrictive so I'll keep it for now.
         path = os.path.abspath(path)
+        if path == self.mykeRoot: return '.'  # Special case
         assert path.startswith(self.mykeRoot)
         relPath = path[len(self.mykeRoot):]
-        assert relPath[0] == '/'
-        assert relPath[-1] != '/'
+        assert relPath.startswith('/'), 'Unexpected path: %r --> %r'%(path, relPath)
+        assert not relPath.endswith('/')
         return relPath[1:]
     def getCommand(self, path):
         cmdsCache, relPath = self.getCommandsCache(), self.relPath(path)
         key = ' --> '.join((relPath, os.path.relpath(self.outRoot, self.mykeRoot)))
         if key not in cmdsCache:
             result = subprocess.Popen([self.mykefilePath], env=childEnv(self.mykeRoot, relPath, self.outRoot), stdout=subprocess.PIPE).stdout.read().strip()
-            assert result, '%r produced blank result!'%(self.mykefilePath,)
             # 'result' can be one of the following:
-            #     * A special value, like 'SKIP'
-            #     * A path like '../bin/render'
-            #     * A JSON list of strings, like '["gcc", "-c", "/a/b/c.c"]'
-            if result in [SKIP]: cmdsCache[key] = result
-            else:
-                path = os.path.abspath(os.path.join(self.mykeRoot, result))
-                if os.path.exists(path): cmdsCache[key] = [path]
-                else:
-                    # Assume it's a command in a JSON list of strings.
-                    try:
-                        cmd = json.loads(result)
-                        if type(cmd) != list: raise ValueError('Expected a JSON list of strings')
-                        cmdsCache[key] = map(str, cmd)
-                    except: raise ValueError('Error while processing %r -- Invalid %s output: %r'%(relPath, MYKEFILE, result))
+            #     * Nothing  (indicates a skip)
+            #     * A multi-line sh command like "../bin/render" or "gcc -c '/a/b/c.c'"
+            cmdsCache[key] = result
         return cmdsCache[key]
     def run(self, path):
-        try:
-            cmd = self.getCommand(path)
-            if cmd == SKIP: return
-            self.fab.run(cmd, # cwd=self.mykeRoot,  # I do not send 'cwd' because fabricate.py doesn't know how to deal with it, and all the strace-detected paths get messed up.  I do some tricks in _Fab to compensate for this.
-                         env=childEnv(self.mykeRoot, self.relPath(path), self.outRoot))
-        except:
-            print >> sys.stderr, '\nBuild Failed!'
-            print >> sys.stderr, 'There was an error while running this command: %s\n'%(' '.join(map(repr,cmd)),)
-            import traceback
-            traceback.print_exc()
+        cmd = self.getCommand(path)
+        if not cmd: return
+        try: self.fab.run(['/bin/sh', '-euxs'],
+                          # cwd=self.mykeRoot,  # I do not send 'cwd' because fabricate.py doesn't know how to deal with it, and all the strace-detected paths get messed up.  I do some tricks in _Fab to compensate for this.
+                          env=childEnv(self.mykeRoot, self.relPath(path), self.outRoot),
+                          input=cmd)   # Send our command to stdin.
+        except fabricate.ExecutionError as e:
+            print >> sys.stderr, '\nBuild Failed!  Exit Code %r'%(e.args[2],)
+            # print >> sys.stderr, 'There was an error while running this command: %s\n'%(cmd,)
+            # import traceback; traceback.print_exc()
             sys.exit(1)
 
 def build(inPath, outDir):
@@ -164,7 +146,7 @@ def build(inPath, outDir):
     if inPath == '/': pass  # Special case becase '/' is its own parent.
     else:
         parentMyker = getMyker(os.path.dirname(inPath), copyPathTraversal(inPath, os.path.dirname(inPath), outDir))
-        if parentMyker.getCommand(inPath) == SKIP: return
+        if not parentMyker.getCommand(inPath): return
     
     # If we get here, we are not skipping this item.  Get this item's command:
     getMyker(inPath, outDir).run(inPath)
@@ -179,19 +161,18 @@ class _Fab(myke.fabricate.Builder):
         kwargs['runner'] = 'strace_runner'      # Hard-code StraceRunner since I have never tested with anything else (and don't plan to).
         super(_Fab, self).__init__(*args, **kwargs)
         self.runner.build_dir = self.mykeRoot   # StraceRunner uses its build_dir for path chopping.
-    def mykeCommand(self, command): return ' '.join(['%s=%s'%(k,v) for k,v in sorted(self.mykeVars.items())]) + ' ' + command
-    def echo_command(self, command, echo=None): return super(_Fab, self).echo_command(self.mykeCommand(command), echo=echo)
+    def mykeCommand(self, command): return ' '.join(['%s=%s'%(k,v) for k,v in sorted(self.mykeVars.items())]) + ' ' + command + ' ' + self.mykeInput
     def _run(self, *args, **kwargs):
         assert not self.parallel_ok   #  This hack does not work for parallel code.  I'll improve it if/when I encounter the need to.
-        assert not hasattr(self, 'mykeVars')  # Try to catch unexpected behavior.
-        self.mykeVars = {}
+        assert not hasattr(self, 'mykeVars')  and  not hasattr(self, 'mykeInput')  # Try to catch unexpected behavior.
+        self.mykeVars, self.mykeInput = {}, kwargs.get('input', None)
         if 'env' in kwargs:
             for k,v in kwargs['env'].items():
                 if k.upper().startswith('MYKE'): self.mykeVars[k] = v
         assert self.mykeVars['MYKE_IN_DIR'] == self.mykeRoot  and  self.runner.build_dir == self.mykeRoot
         os.chdir(self.mykeRoot)  # We must change our own CWD because fabricate.py does not know how to extract the 'cwd' argument from the Popen kwargs.  If this ends up being a concurrency issue, i'll need to adjust fabricate.py to handle per-builder CWD.
         x = super(_Fab, self)._run(*args, **kwargs)
-        del self.mykeVars            # Try to catch unexpected behavior.
+        del self.mykeVars, self.mykeInput            # Try to catch unexpected behavior.
         return x
     def cmdline_outofdate(self, command): return super(_Fab, self).cmdline_outofdate(self.mykeCommand(command))
     def done(self, command, deps, output): return super(_Fab, self).done(self.mykeCommand(command), deps, output)
