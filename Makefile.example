@@ -1,13 +1,13 @@
 
-# This is an example Makefile which can manage the top-level of a Myke project.
+# This is an example Makefile which can manage the top-level of a Muck project.
 
 # Find the location of this Makefile (this method works with 'make -C', but maybe not with 'make -f'.):
 THIS_MAKEFILE=$(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
 MAKEFILE_DIR=$(patsubst %/,%,$(dir $(THIS_MAKEFILE)))
 
-# We use the Makefile location to guess our project root and Myke location:
+# We use the Makefile location to guess our project root and Muck location:
 PROJ_ROOT=${MAKEFILE_DIR}
-MYKE_DIR=${MAKEFILE_DIR}
+MUCK_DIR=${MAKEFILE_DIR}
 
 # Directory locations:
 IN_NAME=1-input
@@ -34,7 +34,7 @@ dev:
 	@echo Copying ${IN_NAME} '-->' ${BUILD_NAME}
 	@rsync -aHAX "${IN_DIR}/" "${BUILD_DIR}"
 	@echo Building ${BUILD_NAME} '-->' ${OUT_DEV_NAME}
-	@"${MYKE_DIR}/bin/myke" "${BUILD_DIR}" "${OUT_DEV_DIR}"
+	@"${MUCK_DIR}/bin/muck" "${BUILD_DIR}" "${OUT_DEV_DIR}"
 	@echo
 	@echo "DEV Built Successfully!  Output is at: ${OUT_DEV_DIR}"
 	@echo

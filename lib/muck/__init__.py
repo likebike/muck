@@ -2,19 +2,26 @@
 
 # Created by Christopher Sebastian, 2016-03-01
 
-import os, sys, fnmatch, re, subprocess, json, string, atexit, stat
-import myke.fabricate
+# Name brainstorm session:
+#     jumble craft transform metamorphose morph convert redo regen process trans glue tape
+#     haystack rummage weld muddle hunt process compile render conjure do invoke distill
+#     churn fudge publish remake instruct change cook cobble classify myke mike muck use
+#     abuse squander eat "Here, use this.  HUT" use uzit buse abuz
 
-MYKEFILE = 'Mykefile'
-MYKECMDS = '.myke_commands'
-MYKEDEPS = '.myke_deps'
+
+import os, sys, fnmatch, re, subprocess, json, string, atexit, stat
+import muck.fabricate
+
+MUCKFILE = 'Muckfile'
+MUCKCMDS = '.muck_commands'
+MUCKDEPS = '.muck_deps'
 
 def childEnv(inRoot, relPath, outRoot):
     env = dict(os.environ)
     # Set some environment variables that might be useful:
-    env['MYKE_IN_DIR'] = inRoot
-    env['MYKE_REL_PATH'] = relPath
-    env['MYKE_OUT_DIR'] = outRoot
+    env['MUCK_IN_DIR'] = inRoot
+    env['MUCK_REL_PATH'] = relPath
+    env['MUCK_OUT_DIR'] = outRoot
     env['PYTHON'] = sys.executable
     # Also, make sure that the Python running this script is first on $PATH:
     # This way, scripts can use the same Python with "#!/usr/bin/env python".
@@ -34,69 +41,69 @@ class CD(object):
 
 
 # reload() protection:
-try: _mykeRoots, _mykers
-except NameError: _mykeRoots, _mykers = {}, {}
-class NotAMykeRoot(Exception): pass
-def getMykeRoot(path): # Traverse up the path until we find a Mykefile:
+try: _muckRoots, _muckers
+except NameError: _muckRoots, _muckers = {}, {}
+class NotAMuckRoot(Exception): pass
+def getMuckRoot(path): # Traverse up the path until we find a Muckfile:
     assert os.path.isabs(path)
-    if path not in _mykeRoots:
-        if os.path.isdir(path) and  os.path.exists(os.path.join(path, MYKEFILE)): _mykeRoots[path] = path
-        elif not path or path=='/': raise NotAMykeRoot('Unable to find %s'%(MYKEFILE,))
-        else: _mykeRoots[path] = getMykeRoot(os.path.dirname(path))
-    return _mykeRoots[path]
+    if path not in _muckRoots:
+        if os.path.isdir(path) and  os.path.exists(os.path.join(path, MUCKFILE)): _muckRoots[path] = path
+        elif not path or path=='/': raise NotAMuckRoot('Unable to find %s'%(MUCKFILE,))
+        else: _muckRoots[path] = getMuckRoot(os.path.dirname(path))
+    return _muckRoots[path]
 
 def copyPathTraversal(origDir1, newDir1, origDir2):
     assert os.path.isdir(origDir1) and os.path.isdir(newDir1) and os.path.isdir(origDir2)
     newDir2 = os.path.normpath(os.path.join(origDir2, os.path.relpath(newDir1, origDir1)))
     return newDir2
 
-def getMyker(inRoot, outRoot):
-    assert getMykeRoot(inRoot) == inRoot
-    if inRoot not in _mykers: _mykers[inRoot] = myke._Myker(inRoot, outRoot)
-    return _mykers[inRoot]
+def getMucker(inRoot, outRoot):
+    assert getMuckRoot(inRoot) == inRoot
+    if inRoot not in _muckers: _muckers[inRoot] = muck._Mucker(inRoot, outRoot)
+    return _muckers[inRoot]
 
 # Override some fabricate.py functionality:
 FAB_COUNT = 0
-class _Fab(myke.fabricate.Builder):
+class _Fab(muck.fabricate.Builder):
     def __init__(self, inRoot, *args, **kwargs):
         self.inRoot = inRoot
         kwargs['runner'] = 'strace_runner'      # Hard-code StraceRunner since I have never tested with anything else (and don't plan to).
         super(_Fab, self).__init__(*args, **kwargs)
         self.runner.build_dir = self.inRoot   # StraceRunner uses its build_dir for path chopping.
-    def mykeCommand(self, command): return ' '.join(['%s=%s'%(k,v) for k,v in sorted(self.mykeVars.items())]) + ' ' + command + ' ' + self.mykeInput
+    def muckCommand(self, command): return ' '.join(['%s=%s'%(k,v) for k,v in sorted(self.muckVars.items())]) + ' ' + command + ' ' + self.muckInput
     def _run(self, *args, **kwargs):
         assert not self.parallel_ok   #  This hack does not work for parallel code.  I'll improve it if/when I encounter the need to.
-        assert not hasattr(self, 'mykeVars')  and  not hasattr(self, 'mykeInput')  # Try to catch unexpected behavior.
-        self.mykeVars, self.mykeInput = {}, kwargs.get('input', None)
+        assert not hasattr(self, 'muckVars')  and  not hasattr(self, 'muckInput')  # Try to catch unexpected behavior.
+        self.muckVars, self.muckInput = {}, kwargs.get('input', None)
         if 'env' in kwargs:
             for k,v in kwargs['env'].items():
-                if k.upper().startswith('MYKE'): self.mykeVars[k] = v
-        assert self.mykeVars['MYKE_IN_DIR'] == self.inRoot  and  self.runner.build_dir == self.inRoot
+                if k.upper().startswith('MUCK'): self.muckVars[k] = v
+        assert self.muckVars['MUCK_IN_DIR'] == self.inRoot  and  self.runner.build_dir == self.inRoot
         with CD(self.inRoot): # We must change our own CWD because fabricate.py does not know how to extract the 'cwd' argument from the Popen kwargs.  If this ends up being a concurrency issue, i'll need to adjust fabricate.py to handle per-builder CWD.
             x = super(_Fab, self)._run(*args, **kwargs)
-            del self.mykeVars, self.mykeInput            # Try to catch unexpected behavior.
+            del self.muckVars, self.muckInput            # Try to catch unexpected behavior.
             return x
     def cmdline_outofdate(self, command):
         global FAB_COUNT
-        result = super(_Fab, self).cmdline_outofdate(self.mykeCommand(command))
+        result = super(_Fab, self).cmdline_outofdate(self.muckCommand(command))
         if result: FAB_COUNT += 1    ### Questionable logic, definitely not concurrency-safe.
         return result
-    def done(self, command, deps, output): return super(_Fab, self).done(self.mykeCommand(command), deps, output)
+    def done(self, command, deps, output): return super(_Fab, self).done(self.muckCommand(command), deps, output)
 
-class _Myker(object):
+class _Mucker(object):
     def __init__(self, inRoot, outRoot, debug=False):
         assert os.path.isabs(inRoot)
         self.inRoot = inRoot
-        self.mykefilePath = os.path.join(self.inRoot, MYKEFILE)
-        assert os.path.exists(self.mykefilePath), '%s not found!'%(self.mykefilePath,)
-        chmod_add(self.mykefilePath, stat.S_IXUSR)
-        assert inRoot not in _mykers, 'Already created a myker with this inRoot!'
-        self.hashKey = '__hash(%s)__'%(MYKEFILE,)
+        self.muckfilePath = os.path.join(self.inRoot, MUCKFILE)
+        assert os.path.exists(self.muckfilePath), '%s not found!'%(self.muckfilePath,)
+        chmod_add(self.muckfilePath, stat.S_IXUSR)
+        assert inRoot not in _muckers, 'Already created a mucker with this inRoot!'
+        self.hashKey = '__hash(%s)__'%(MUCKFILE,)
         assert os.path.isabs(outRoot)
         self.outRoot = outRoot
-        self.cmdsPath = os.path.join(inRoot, MYKECMDS)
+        self.cmdsPath = os.path.join(inRoot, MUCKCMDS)
         self._cmdsCache = None
-        self.fab = _Fab(self.inRoot, ignore=r'^\.{1,2}$|^/(dev|proc|sys)/', dirs=['/'], depsname=os.path.join(inRoot, MYKEDEPS), quiet=True, debug=debug)  # ignore: . .. /dev/ /proc/ /sys/
+        self.fab = _Fab(self.inRoot, ignore=r'^\.{1,2}$|^/(dev|proc|sys)/', dirs=['/'], depsname=os.path.join(inRoot, MUCKDEPS), quiet=True, debug=debug)  # ignore: . .. /dev/ /proc/ /sys/
     def writeCommandsCache(self):
         if self._cmdsCache:
             with open(self.cmdsPath, 'w') as f: json.dump(self._cmdsCache, f, indent=2, sort_keys=True)
@@ -106,7 +113,7 @@ class _Myker(object):
             try: self._cmdsCache = json.load(open(self.cmdsPath))
             except: self._cmdsCache = {}
             atexit.register(self.writeCommandsCache)
-            curHash = myke.fabricate.md5_hasher(self.mykefilePath)
+            curHash = muck.fabricate.md5_hasher(self.muckfilePath)
             if self._cmdsCache.get(self.hashKey, None) != curHash: self._cmdsCache = {self.hashKey:curHash}
         return self._cmdsCache
     def getCommand(self, relPath):
@@ -114,7 +121,7 @@ class _Myker(object):
         key = ' --> '.join((relPath, os.path.relpath(self.outRoot, self.inRoot)))
         if key not in cmdsCache:
             with CD(self.inRoot):
-                result = subprocess.Popen([self.mykefilePath], env=childEnv(self.inRoot, relPath, self.outRoot), stdout=subprocess.PIPE).stdout.read().strip()
+                result = subprocess.Popen([self.muckfilePath], env=childEnv(self.inRoot, relPath, self.outRoot), stdout=subprocess.PIPE).stdout.read().strip()
             # 'result' can be one of the following:
             #     * Nothing  (indicates a skip)
             #     * A multi-line sh command like "../bin/render" or "gcc -c '/a/b/c.c'"
@@ -136,47 +143,47 @@ class _Myker(object):
 def buildRoot(inRoot, relPath, outRoot):
     assert os.path.isabs(inRoot) and not os.path.isabs(relPath) and os.path.isabs(outRoot)
     assert inRoot[-1]!='/'  and  relPath[-1]!='/'  and  outRoot[-1]!='/'
-    assert getMykeRoot(inRoot) == inRoot
+    assert getMuckRoot(inRoot) == inRoot
     inPath = os.path.normpath(os.path.join(inRoot, relPath))
     assert os.path.exists(inPath)
-    thisMyker = getMyker(inRoot, outRoot)
+    thisMucker = getMucker(inRoot, outRoot)
     def build(relPath):
-        if not thisMyker.getCommand(relPath): return # Check whether this item should be skipped.
+        if not thisMucker.getCommand(relPath): return # Check whether this item should be skipped.
         xPath = os.path.join(inRoot, relPath)
-        xRoot = getMykeRoot(xPath)
+        xRoot = getMuckRoot(xPath)
         if xRoot == xPath: return buildInfinity(xRoot, '.', copyPathTraversal(inRoot, xRoot, outRoot))
         assert xRoot == inRoot
         if os.path.islink(xPath) and os.path.isdir(xPath):
             print >> sys.stderr, 'Directory symlinks are not yet supported:', xPath  # Need to handle infinite cycles and other crazy stuff.
         elif os.path.isdir(xPath):
             for x in sorted(os.listdir(xPath)): build(os.path.join(relPath, x))
-        else: thisMyker.run(relPath)
+        else: thisMucker.run(relPath)
     if relPath == '.':
-        # We are processing a new Myke Root directory.  Need to iterate over directory contents.
+        # We are processing a new Muck Root directory.  Need to iterate over directory contents.
         for x in sorted(os.listdir(inRoot)):
-            if x in [MYKEFILE, MYKECMDS, MYKEDEPS]: continue  # Ignore Myke-related files.
+            if x in [MUCKFILE, MUCKCMDS, MUCKDEPS]: continue  # Ignore Muck-related files.
             build(x)
     else: build(relPath)
     
 def buildInfinity(inRoot, relPath, outRoot, isTopLevel=False):
     global FAB_COUNT
     someWorkWasPerformed = False
-    # print >> sys.stderr, 'Starting:', os.path.join(inRoot, MYKEFILE)   # Due to the way that the 'infinity' process works, I do not show when we start a new root;  It would be confusing to users.
+    # print >> sys.stderr, 'Starting:', os.path.join(inRoot, MUCKFILE)   # Due to the way that the 'infinity' process works, I do not show when we start a new root;  It would be confusing to users.
     while True:
         startFabCount = FAB_COUNT
         if isTopLevel:   # Really, it's better to always reset each individual cache on each loop, rather than just at the top level, but I'm seeing if this can provide some performance boost while still being logically correct.
-            for n,m in _mykers.items(): m.fab.hash_cache = {}   # Reset all the caches so that changes get noticed.
+            for n,m in _muckers.items(): m.fab.hash_cache = {}   # Reset all the caches so that changes get noticed.
         buildRoot(inRoot, relPath, outRoot)
         if FAB_COUNT==startFabCount: break
         someWorkWasPerformed = True
-    if someWorkWasPerformed: print >> sys.stderr, 'Done:', os.path.join(inRoot, MYKEFILE)
+    if someWorkWasPerformed: print >> sys.stderr, 'Done:', os.path.join(inRoot, MUCKFILE)
 
 def main():
     inPath = os.getcwd()
     if len(sys.argv) >= 2: inPath = os.path.abspath(sys.argv[1])
     assert os.path.exists(inPath)
-    try: inRoot = getMykeRoot(inPath)
-    except NotAMykeRoot as e:
+    try: inRoot = getMuckRoot(inPath)
+    except NotAMuckRoot as e:
         print >> sys.stderr, e
         sys.exit(1)
     relPath = os.path.relpath(inPath, inRoot)
@@ -185,3 +192,10 @@ def main():
     buildInfinity(inRoot, relPath, outRoot, isTopLevel=True)
 
 if __name__ == '__main__': main()
+
+
+
+
+
+
+
