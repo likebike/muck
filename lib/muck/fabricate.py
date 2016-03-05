@@ -226,6 +226,12 @@ def md5_hasher(filename):
             return md5func(os.readlink(filename)).hexdigest()
         elif os.path.isdir(filename):
             return md5func(filename).hexdigest()
+        elif filename.startswith(':MUCK_LISTDIR:'):       #############  Added by Christopher Sebastian
+            dirPath = filename[len(':MUCK_LISTDIR:'):]    #############  Added by Christopher Sebastian
+            try:                                      #############  Added by Christopher Sebastian
+                dirList = dirPath + ' ' + ' '.join(sorted(os.listdir(dirPath)))   #############  Added by Christopher Sebastian
+                return md5func(dirList).hexdigest()   #############  Added by Christopher Sebastian
+            except Exception as e: return md5func(dirPath).hexdigest()   #############  Added by Christopher Sebastian
         return None
 
 def mtime_hasher(filename):
@@ -685,6 +691,7 @@ class StraceRunner(Runner):
                     if is_output:
                         processes[pid].add_output(name)
                     else:
+                        if open_match  and  os.path.isdir(os.path.join(self.build_dir, name)): name = ':MUCK_LISTDIR:%s'%(name)       ############   Added by Christopher Sebastian
                         processes[pid].add_dep(name)
 
         match = self._chdir_re.match(line)

@@ -19,9 +19,9 @@ MUCKDEPS = '.muck_deps'
 def childEnv(inRoot, relPath, outRoot):
     env = dict(os.environ)
     # Set some environment variables that might be useful:
-    env['MUCK_IN_DIR'] = inRoot
+    env['MUCK_IN_ROOT'] = inRoot
     env['MUCK_REL_PATH'] = relPath
-    env['MUCK_OUT_DIR'] = outRoot
+    env['MUCK_OUT_ROOT'] = outRoot
     env['PYTHON'] = sys.executable
     # Also, make sure that the Python running this script is first on $PATH:
     # This way, scripts can use the same Python with "#!/usr/bin/env python".
@@ -43,12 +43,12 @@ class CD(object):
 # reload() protection:
 try: _muckRoots, _muckers
 except NameError: _muckRoots, _muckers = {}, {}
-class NotAMuckRoot(Exception): pass
+class NoMuckRoot(Exception): pass
 def getMuckRoot(path): # Traverse up the path until we find a Muckfile:
     assert os.path.isabs(path)
     if path not in _muckRoots:
         if os.path.isdir(path) and  os.path.exists(os.path.join(path, MUCKFILE)): _muckRoots[path] = path
-        elif not path or path=='/': raise NotAMuckRoot('Unable to find %s'%(MUCKFILE,))
+        elif not path or path=='/': raise NoMuckRoot('Unable to find %s'%(MUCKFILE,))
         else: _muckRoots[path] = getMuckRoot(os.path.dirname(path))
     return _muckRoots[path]
 
@@ -61,6 +61,10 @@ def getMucker(inRoot, outRoot):
     assert getMuckRoot(inRoot) == inRoot
     if inRoot not in _muckers: _muckers[inRoot] = muck._Mucker(inRoot, outRoot)
     return _muckers[inRoot]
+
+def FAIL(code):
+    print >> sys.stderr, '\nBuild Failed!  Exit Code %r'%(code,)
+    sys.exit(1)
 
 # Override some fabricate.py functionality:
 FAB_COUNT = 0
@@ -78,7 +82,7 @@ class _Fab(muck.fabricate.Builder):
         if 'env' in kwargs:
             for k,v in kwargs['env'].items():
                 if k.upper().startswith('MUCK'): self.muckVars[k] = v
-        assert self.muckVars['MUCK_IN_DIR'] == self.inRoot  and  self.runner.build_dir == self.inRoot
+        assert self.muckVars['MUCK_IN_ROOT'] == self.inRoot  and  self.runner.build_dir == self.inRoot
         with CD(self.inRoot): # We must change our own CWD because fabricate.py does not know how to extract the 'cwd' argument from the Popen kwargs.  If this ends up being a concurrency issue, i'll need to adjust fabricate.py to handle per-builder CWD.
             x = super(_Fab, self)._run(*args, **kwargs)
             del self.muckVars, self.muckInput            # Try to catch unexpected behavior.
@@ -121,7 +125,10 @@ class _Mucker(object):
         key = ' --> '.join((relPath, os.path.relpath(self.outRoot, self.inRoot)))
         if key not in cmdsCache:
             with CD(self.inRoot):
-                result = subprocess.Popen([self.muckfilePath], env=childEnv(self.inRoot, relPath, self.outRoot), stdout=subprocess.PIPE).stdout.read().strip()
+                proc = subprocess.Popen([self.muckfilePath], env=childEnv(self.inRoot, relPath, self.outRoot), stdout=subprocess.PIPE)
+                result = proc.stdout.read().strip()
+                retcode = proc.wait()
+                if retcode != 0: FAIL(retcode)
             # 'result' can be one of the following:
             #     * Nothing  (indicates a skip)
             #     * A multi-line sh command like "../bin/render" or "gcc -c '/a/b/c.c'"
@@ -134,11 +141,7 @@ class _Mucker(object):
                           # cwd=self.inRoot,  # I do not send 'cwd' because fabricate.py doesn't know how to deal with it, and all the strace-detected paths get messed up.  I do some tricks in _Fab to compensate for this.
                           env=childEnv(self.inRoot, relPath, self.outRoot),
                           input=cmd)   # Send our command to stdin.
-        except fabricate.ExecutionError as e:
-            print >> sys.stderr, '\nBuild Failed!  Exit Code %r'%(e.args[2],)
-            # print >> sys.stderr, 'There was an error while running this command: %s\n'%(cmd,)
-            # import traceback; traceback.print_exc()
-            sys.exit(1)
+        except fabricate.ExecutionError as e: FAIL(e.args[2])
 
 def buildRoot(inRoot, relPath, outRoot):
     assert os.path.isabs(inRoot) and not os.path.isabs(relPath) and os.path.isabs(outRoot)
@@ -183,13 +186,18 @@ def main():
     if len(sys.argv) >= 2: inPath = os.path.abspath(sys.argv[1])
     assert os.path.exists(inPath)
     try: inRoot = getMuckRoot(inPath)
-    except NotAMuckRoot as e:
+    except NoMuckRoot as e:
         print >> sys.stderr, e
         sys.exit(1)
     relPath = os.path.relpath(inPath, inRoot)
     outRoot = inRoot
     if len(sys.argv) >= 3: outRoot = os.path.abspath(sys.argv[2])
     buildInfinity(inRoot, relPath, outRoot, isTopLevel=True)
+
+def markDirListAsDep(dirPath):
+    # I have applied some hacks to fabricate.py to enable me to depend on directory listings.  See :MUCK_LISTDIR: stuff.
+    try: os.close(os.open(dirPath, os.O_RDONLY))
+    except: pass
 
 if __name__ == '__main__': main()
 

@@ -1,4 +1,4 @@
 #!/bin/bash
 MY_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-PYTHONPATH="$MY_DIR/../lib${PYTHONPATH+:${PYTHONPATH:-}}" exec python -m muck "$@"
+PYTHONPATH="$(readlink -e "$MY_DIR/../lib")${PYTHONPATH:+:${PYTHONPATH:-}}" exec python -m muck "$@"
 
