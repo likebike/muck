@@ -36,12 +36,15 @@ if ! (cd "$SRC_DIR" && find .) >"$LIST_FILE_NEW"; then
     exit 4
 fi
 grep -vxFf "$LIST_FILE_NEW" "$LIST_FILE" | (cd "$DST_DIR" && while read REL_PATH; do
-    FULL_PATH="$(readlink -e "$REL_PATH")"
-    echo "Removing:  $FULL_PATH" >&2
-    rm -r "$FULL_PATH" || true
+    FULL_PATH="$DST_DIR/${REL_PATH#./}"
+    if [[ -e "$FULL_PATH" ]]; then
+        echo "Removing:  $FULL_PATH" >&2
+        rm -r "$FULL_PATH" || true
+    fi
 done)
 if ! mv "$LIST_FILE_NEW" "$LIST_FILE"; then
     echo "Error while renaming LIST_FILE:  $LIST_FILE_NEW  -->  $LIST_FILE" >&2
     exit 5
 fi
+echo Done Syncing >&2
 
