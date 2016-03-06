@@ -1,0 +1,48 @@
+#!/bin/bash -eu
+
+if [[ "$#" -ne 3 ]]; then
+    echo "usage: sync SRC_DIR DST_DIR COPY_DIR" >&2
+    exit 1
+fi
+
+SRC_DIR="$1"
+if ! [[ -d "$SRC_DIR" ]]; then
+    echo "SRC_DIR ($SRC_DIR) does not exist!" >&2
+    exit 2
+fi
+SRC_DIR="$(readlink -e "$SRC_DIR")"
+
+DST_DIR="$2"
+if ! [[ -e "$DST_DIR" ]]; then
+    mkdir -p "$DST_DIR"
+fi
+DST_DIR="$(readlink -e "$DST_DIR")"
+
+COPY_DIR="$3"
+if ! [[ -e "$COPY_DIR" ]]; then
+    mkdir -p "$COPY_DIR"
+fi
+COPY_DIR="$(readlink -e "$COPY_DIR")"
+
+for D in "$COPY_DIR" "$DST_DIR"; do
+    if ! rsync -aHAX "$SRC_DIR/" "$D"; then
+        echo "Error while copying:  $SRC_DIR  -->  $D" >&2
+        exit 3
+    fi
+done
+
+# Use COPY_DIR to detect deletions in SRC_DIR, then propagate them to DST_DIR:
+rsync -nrv --info=flist0,stats0 --delete --existing --ignore-existing "$SRC_DIR/" "$COPY_DIR" | while read L; do
+    if [[ "$L" == "deleting "* ]]; then
+        # 'rsync' always produces relative paths:
+        REL_PATH=${L#deleting }
+        for P in "$DST_DIR/$REL_PATH" "$COPY_DIR/$REL_PATH"; do
+            if [[ -d "$P" ]]; then
+                rm -r "$P" || true
+            else
+                rm "$P" || true
+            fi
+        done
+    fi
+done 
+

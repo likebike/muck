@@ -16,6 +16,12 @@ MUCKFILE = 'Muckfile'
 MUCKCMDS = '.muck_commands'
 MUCKDEPS = '.muck_deps'
 
+def listdir(dirPath):
+    # I have applied some hacks to fabricate.py to enable me to depend on directory listings.  See :MUCK_LISTDIR: stuff.
+    try: os.close(os.open(dirPath, os.O_RDONLY))
+    except: pass
+    return os.listdir(dirPath)
+
 def childEnv(inRoot, relPath, outRoot):
     env = dict(os.environ)
     # Set some environment variables that might be useful:
@@ -193,11 +199,6 @@ def main():
     outRoot = inRoot
     if len(sys.argv) >= 3: outRoot = os.path.abspath(sys.argv[2])
     buildInfinity(inRoot, relPath, outRoot, isTopLevel=True)
-
-def markDirListAsDep(dirPath):
-    # I have applied some hacks to fabricate.py to enable me to depend on directory listings.  See :MUCK_LISTDIR: stuff.
-    try: os.close(os.open(dirPath, os.O_RDONLY))
-    except: pass
 
 if __name__ == '__main__': main()
 

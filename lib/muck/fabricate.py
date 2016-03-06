@@ -226,12 +226,12 @@ def md5_hasher(filename):
             return md5func(os.readlink(filename)).hexdigest()
         elif os.path.isdir(filename):
             return md5func(filename).hexdigest()
-        elif filename.startswith(':MUCK_LISTDIR:'):       #############  Added by Christopher Sebastian
-            dirPath = filename[len(':MUCK_LISTDIR:'):]    #############  Added by Christopher Sebastian
-            try:                                      #############  Added by Christopher Sebastian
-                dirList = dirPath + ' ' + ' '.join(sorted(os.listdir(dirPath)))   #############  Added by Christopher Sebastian
-                return md5func(dirList).hexdigest()   #############  Added by Christopher Sebastian
-            except Exception as e: return md5func(dirPath).hexdigest()   #############  Added by Christopher Sebastian
+        elif filename.startswith(':MUCK_LISTDIR:'):                               #############  Added by Christopher Sebastian.  Note that 'rsync' does a terrible job of syncing directory modification times -- it sets the dir mtime *before* descending into it, therefore if any contents get updated the synced dir mtime is lost.  Therefore, we can't just delegate this work over to mtime_hasher -- we need to use the directory listing for maximum reliability.
+            dirPath = filename[len(':MUCK_LISTDIR:'):]                            #############  Added by Christopher Sebastian
+            try:                                                                  #############  Added by Christopher Sebastian
+                dirList = dirPath + ' ' + ' '.join(sorted(os.listdir(dirPath)))   #############  Added by Christopher Sebastian.  I actually don't understand why we include the dirPath -- i just do it because the original fabricate.py code hashes the filename.  I personally think it's unnecessary.
+                return md5func(dirList).hexdigest()                               #############  Added by Christopher Sebastian
+            except Exception as e: return md5func(dirPath).hexdigest()            #############  Added by Christopher Sebastian
         return None
 
 def mtime_hasher(filename):
