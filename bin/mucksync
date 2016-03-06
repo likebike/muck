@@ -1,7 +1,7 @@
 #!/bin/bash -eu
 
 if [[ "$#" -ne 3 ]]; then
-    echo "usage: sync SRC_DIR DST_DIR COPY_DIR" >&2
+    echo "usage: sync SRC_DIR DST_DIR LIST_FILE" >&2
     exit 1
 fi
 
@@ -18,31 +18,30 @@ if ! [[ -e "$DST_DIR" ]]; then
 fi
 DST_DIR="$(readlink -e "$DST_DIR")"
 
-COPY_DIR="$3"
-if ! [[ -e "$COPY_DIR" ]]; then
-    mkdir -p "$COPY_DIR"
+LIST_FILE="$3"
+if ! [[ -e "$LIST_FILE" ]]; then
+    touch "$LIST_FILE"
 fi
-COPY_DIR="$(readlink -e "$COPY_DIR")"
+LIST_FILE="$(readlink -e "$LIST_FILE")"
+LIST_FILE_NEW="$LIST_FILE.new"
 
-for D in "$COPY_DIR" "$DST_DIR"; do
-    if ! rsync -aHAX "$SRC_DIR/" "$D"; then
-        echo "Error while copying:  $SRC_DIR  -->  $D" >&2
-        exit 3
-    fi
-done
+if ! rsync -aHAX "$SRC_DIR/" "$DST_DIR"; then
+    echo "Error while copying:  $SRC_DIR  -->  $DST_DIR" >&2
+    exit 3
+fi
 
-# Use COPY_DIR to detect deletions in SRC_DIR, then propagate them to DST_DIR:
-rsync -nrv --info=flist0,stats0 --delete --existing --ignore-existing "$SRC_DIR/" "$COPY_DIR" | while read L; do
-    if [[ "$L" == "deleting "* ]]; then
-        # 'rsync' always produces relative paths:
-        REL_PATH=${L#deleting }
-        for P in "$DST_DIR/$REL_PATH" "$COPY_DIR/$REL_PATH"; do
-            if [[ -d "$P" ]]; then
-                rm -r "$P" || true
-            else
-                rm "$P" || true
-            fi
-        done
-    fi
-done 
+# Use LIST_FILE to detect deletions in SRC_DIR, then propagate them to DST_DIR:
+if ! (cd "$SRC_DIR" && find .) >"$LIST_FILE_NEW"; then
+    echo "Error while creating new LIST_FILE:  $LIST_FILE_NEW" >&2
+    exit 4
+fi
+grep -vxFf "$LIST_FILE_NEW" "$LIST_FILE" | (cd "$DST_DIR" && while read REL_PATH; do
+    FULL_PATH="$(readlink -e "$REL_PATH")"
+    echo "Removing:  $FULL_PATH" >&2
+    rm -r "$FULL_PATH" || true
+done)
+if ! mv "$LIST_FILE_NEW" "$LIST_FILE"; then
+    echo "Error while renaming LIST_FILE:  $LIST_FILE_NEW  -->  $LIST_FILE" >&2
+    exit 5
+fi
 
