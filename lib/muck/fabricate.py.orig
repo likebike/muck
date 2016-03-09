@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 
-# This file comes from https://github.com/SimonAlfie/fabricate
-
 """Build tool that finds dependencies automatically for any language.
 
 fabricate is a build tool that finds dependencies automatically for any
@@ -514,7 +512,7 @@ class StraceRunner(Runner):
             return None
         possible_system_calls = ['open','stat', 'stat64', 'lstat', 'lstat64',
             'execve','exit_group','chdir','mkdir','rename','clone','vfork',
-            'fork','symlink','creat','getdents']                   ###################  Edited by Christopher Sebastian: added 'getdents'.
+            'fork','symlink','creat']
         valid_system_calls = []
         try:
             # check strace is installed and if it supports each type of call
@@ -529,7 +527,6 @@ class StraceRunner(Runner):
         return ','.join(valid_system_calls)
 
     # Regular expressions for parsing of strace log
-    _getdents_re   = re.compile(r'(?P<pid>\d+)\s+getdents\(\d+<(?P<name>[^>]*)>, .*')        ##########  Added by Christopher Sebastian.  Typical line we're trying to match: 4206  getdents(4</usr/local/lib/python2.7/dist-packages>, /* 2 entries */, 32768) = 48
     _open_re       = re.compile(r'(?P<pid>\d+)\s+open\("(?P<name>[^"]*)", (?P<mode>[^,)]*)')
     _stat_re       = re.compile(r'(?P<pid>\d+)\s+l?stat(?:64)?\("(?P<name>[^"]*)", .*') # stat,lstat,stat64,lstat64
     _execve_re     = re.compile(r'(?P<pid>\d+)\s+execve\("(?P<name>[^"]*)", .*')
@@ -554,7 +551,7 @@ class StraceRunner(Runner):
         shell_keywords = dict(silent=False)
         shell_keywords.update(kwargs)
         try:
-            shell('strace', '-yfo', outname, '-e',        ##############  Edited by Christopher Sebastian: added 'y' flag.
+            shell('strace', '-fo', outname, '-e',
                   'trace=' + self.strace_system_calls,
                   args, **shell_keywords)
         except ExecutionError as e:
@@ -603,7 +600,6 @@ class StraceRunner(Runner):
             del unfinished[pid]
 
         is_output = False
-        getdents_match = self._getdents_re.match(line)     ############  Added by Christopher Sebastian
         open_match = self._open_re.match(line)
         stat_match = self._stat_re.match(line)
         execve_match = self._execve_re.match(line)
@@ -663,7 +659,6 @@ class StraceRunner(Runner):
             match = rename_match
             # the destination of a rename is an output file
             is_output = True
-        elif getdents_match: match = getdents_match            ####################  Added by Christopher Sebastian
             
         if match:
             name = match.group('name')
@@ -688,7 +683,6 @@ class StraceRunner(Runner):
                     if is_output:
                         processes[pid].add_output(name)
                     else:
-                        if getdents_match: name = ':MUCK_LISTDIR:%s'%(name)       ############   Added by Christopher Sebastian
                         processes[pid].add_dep(name)
 
         match = self._chdir_re.match(line)
@@ -1323,7 +1317,6 @@ class Builder(object):
             json.dump(self.deps, f, indent=4, sort_keys=True)
         finally:
             f.close()
-            os.chmod(depsname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IRGRP|stat.S_IWGRP|stat.S_IROTH|stat.S_IWOTH)   ###################  Added by Christopher Sebastian
             self._deps.pop('.deps_version', None)
 
     _runner_map = {

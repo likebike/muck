@@ -9,7 +9,7 @@
 #     abuse squander eat "Here, use this.  HUT" use uzit buse abuz
 
 
-import os, sys, fnmatch, re, subprocess, json, string, atexit, stat
+import os, sys, subprocess, json, atexit, stat
 import muck.fabricate
 
 MUCKFILE = 'Muckfile'
@@ -73,11 +73,29 @@ def FAIL(code):
     sys.exit(1)
 
 # Override some fabricate.py functionality:
+def muck_hasher(path):
+    if not isinstance(path, bytes): path = path.encode('utf-8')
+    try:
+        with open(path, 'rb') as f: return muck.fabricate.md5func(f.read()).hexdigest()
+    except IOError:
+        if hasattr(os, 'readlink') and os.path.islink(path):
+            return muck.fabricate.md5func(os.readlink(path)).hexdigest()
+        if path.startswith(':MUCK_LISTDIR:'):     #  Note that 'rsync' does a terrible job of syncing directory modification times -- it sets the dir mtime *before* descending into it, therefore if any contents get updated the synced dir mtime is lost.  Therefore, we can't just delegate this work over to mtime_hasher -- we need to use the directory listing for maximum reliability.
+            dirPath = path[len(':MUCK_LISTDIR:'):]
+            try:
+                dirList = ' '.join(sorted(os.listdir(dirPath)))
+                return muck.fabricate.md5func(dirList).hexdigest()
+            except: pass
+    return None
+
+            
+    
 FAB_COUNT = 0
 class _Fab(muck.fabricate.Builder):
     def __init__(self, inRoot, *args, **kwargs):
         self.inRoot = inRoot
         kwargs['runner'] = 'strace_runner'      # Hard-code StraceRunner since I have never tested with anything else (and don't plan to).
+        kwargs['hasher'] = muck_hasher
         super(_Fab, self).__init__(*args, **kwargs)
         self.runner.build_dir = self.inRoot   # StraceRunner uses its build_dir for path chopping.
     def muckCommand(self, command): return ' '.join(['%s=%s'%(k,v) for k,v in sorted(self.muckVars.items())]) + ' ' + command + ' ' + self.muckInput
