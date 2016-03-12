@@ -23,6 +23,7 @@ def listdir(dirPath):
     return os.listdir(dirPath)
 
 def childEnv(inRoot, relPath, outRoot):
+    if relPath.startswith('./'): relPath = relPath[2:]
     env = dict(os.environ)
     # Set some environment variables that might be useful:
     env['MUCK_IN_ROOT'] = inRoot
@@ -167,30 +168,29 @@ class _Mucker(object):
                           input=cmd)   # Send our command to stdin.
         except fabricate.ExecutionError as e: FAIL(e.args[2])
 
-def buildRoot(inRoot, relPath, outRoot):
+def build(inRoot, relPath, outRoot):
     assert os.path.isabs(inRoot) and not os.path.isabs(relPath) and os.path.isabs(outRoot)
     assert inRoot[-1]!='/'  and  relPath[-1]!='/'  and  outRoot[-1]!='/'
     assert getMuckRoot(inRoot) == inRoot
     inPath = os.path.normpath(os.path.join(inRoot, relPath))
     assert os.path.exists(inPath)
     thisMucker = getMucker(inRoot, outRoot)
-    def build(relPath):
+    def _build(relPath):
         if not thisMucker.getCommand(relPath): return # Check whether this item should be skipped.
-        xPath = os.path.join(inRoot, relPath)
-        xRoot = getMuckRoot(xPath)
-        if xRoot == xPath: return buildInfinity(xRoot, '.', copyPathTraversal(inRoot, xRoot, outRoot))
-        assert xRoot == inRoot
+        xPath = os.path.normpath(os.path.join(inRoot, relPath))
+        if relPath != '.':   # '.' means that we *are* processing a muckRoot already.
+            xRoot = getMuckRoot(xPath)
+            if xRoot == xPath: return buildInfinity(xRoot, '.', copyPathTraversal(inRoot, xRoot, outRoot))
+            assert xRoot == inRoot
         if os.path.islink(xPath) and os.path.isdir(xPath):
             print >> sys.stderr, 'Directory symlinks are not yet supported:', xPath  # Need to handle infinite cycles and other crazy stuff.
-        elif os.path.isdir(xPath):
-            for x in sorted(os.listdir(xPath)): build(os.path.join(relPath, x))
-        else: thisMucker.run(relPath)
-    if relPath == '.':
-        # We are processing a new Muck Root directory.  Need to iterate over directory contents.
-        for x in sorted(os.listdir(inRoot)):
-            if x in [MUCKFILE, MUCKCMDS, MUCKDEPS]: continue  # Ignore Muck-related files.
-            build(x)
-    else: build(relPath)
+            return
+        if os.path.isdir(xPath):
+            for x in sorted(os.listdir(xPath)):
+                if relPath == '.'  and  x in [MUCKFILE, MUCKCMDS, MUCKDEPS]: continue  # Ignore Muck-related files.
+                _build(os.path.join(relPath, x))
+        thisMucker.run(relPath)
+    _build(relPath)
     
 def buildInfinity(inRoot, relPath, outRoot, isTopLevel=False):
     global FAB_COUNT
@@ -200,7 +200,7 @@ def buildInfinity(inRoot, relPath, outRoot, isTopLevel=False):
         startFabCount = FAB_COUNT
         if isTopLevel:   # Really, it's better to always reset each individual cache on each loop, rather than just at the top level, but I'm seeing if this can provide some performance boost while still being logically correct.
             for n,m in _muckers.items(): m.fab.hash_cache = {}   # Reset all the caches so that changes get noticed.
-        buildRoot(inRoot, relPath, outRoot)
+        build(inRoot, relPath, outRoot)
         if FAB_COUNT==startFabCount: break
         someWorkWasPerformed = True
     if someWorkWasPerformed: print >> sys.stderr, 'Done:', os.path.join(inRoot, MUCKFILE)
