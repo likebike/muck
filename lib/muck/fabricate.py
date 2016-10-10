@@ -495,7 +495,7 @@ def _call_strace(self, *args, **kwargs):
     return self(*args, **kwargs)
 
 class StraceRunner(Runner):
-    keep_temps = False
+    keep_temps = int(os.environ.get('FAB_KEEP_TEMPS', '0'))  ################  Edited by Christopher Sebastian: Changed from hard-coded 'False' to an environment lookup.
 
     def __init__(self, builder, build_dir=None):
         self.strace_system_calls = StraceRunner.get_strace_system_calls()
@@ -629,7 +629,24 @@ class StraceRunner(Runner):
             pid_clone = clone_match.group('pid_clone')
             if pid not in processes:
                 # Simple case where there are no delayed lines
-                processes[pid] = StraceProcess(processes[pid_clone].cwd)
+
+                #### BY Christopher Sebastian:
+                #### On the following line, I was receiving errors like this:  "KeyError: '23979'"
+                #### (I paste the original line here because I have made some modifications to the structure below.)
+                ####
+                ####     processes[pid] = StraceProcess(processes[pid_clone].cwd)
+                ####
+                #### Here's the relevant extract of the strace log:
+                ####
+                ####     23978 clone( <unfinished ...>
+                ####     23979 clone(child_stack=0, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f97149209d0) = 23980
+                ####     23978 <... clone resumed> child_stack=0, flags=CLONE_CHILD_CLEARTID|CLONE_CHILD_SETTID|SIGCHLD, child_tidptr=0x7f97149209d0) = 23979
+                ####
+                #### Notice that process 23979 is created by 23978, but its 'clone' call gets interrupted.
+                #### During the interruption, 23979 clones 23980.  So, when we reach the creation of 23980 by 23979, we actually don't know about 23979 yet.
+
+                if not self._matching_is_delayed(processes, pid_clone, line):      ###############  Added by Christopher Sebastian
+                    processes[pid] = StraceProcess(processes[pid_clone].cwd)
             else:
                 # Some line processing was delayed due to an interupted clone_match
                 processes[pid].cwd = processes[pid_clone].cwd # Set the correct cwd
