@@ -38,6 +38,18 @@ def childEnv(inRoot, relPath, outRoot):
             if p not in pathPieces: pathPieces.append(p)
     env['PATH'] = os.pathsep.join(pathPieces)
     return env
+def extractMuckVars(env):
+    out = {}
+    for k,v in env.items():
+        if k.upper().startswith('MUCK'): out[k] = v
+    return out
+def extractUserMuckVars(env):  # User-defined MUCK env vars.
+    out = {}
+    for k,v in extractMuckVars(env).items():
+        if k in ['MUCK_IN_ROOT', 'MUCK_REL_PATH', 'MUCK_OUT_ROOT']: continue
+        out[k] = v
+    return out
+def envString(env): return ' '.join(['%s=%s'%(k,v) for k,v in sorted(env.items())])
 
 def chmod_add(path, permissions): os.chmod(path, os.stat(path).st_mode | permissions)
 
@@ -99,14 +111,12 @@ class _Fab(muck.fabricate.Builder):
         kwargs['hasher'] = muck_hasher
         super(_Fab, self).__init__(*args, **kwargs)
         self.runner.build_dir = self.inRoot   # StraceRunner uses its build_dir for path chopping.
-    def muckCommand(self, command): return ' '.join(['%s=%s'%(k,v) for k,v in sorted(self.muckVars.items())]) + ' ' + command + ' ' + self.muckInput
+    def muckCommand(self, command): return envString(self.muckVars) + ' ' + command + ' ' + self.muckInput
     def _run(self, *args, **kwargs):
         assert not self.parallel_ok   #  This hack does not work for parallel code.  I'll improve it if/when I encounter the need to.
         assert not hasattr(self, 'muckVars')  and  not hasattr(self, 'muckInput')  # Try to catch unexpected behavior.
         self.muckVars, self.muckInput = {}, kwargs.get('input', None)
-        if 'env' in kwargs:
-            for k,v in kwargs['env'].items():
-                if k.upper().startswith('MUCK'): self.muckVars[k] = v
+        if 'env' in kwargs: self.muckVars=extractMuckVars(kwargs['env'])
         assert self.muckVars['MUCK_IN_ROOT'] == self.inRoot  and  self.runner.build_dir == self.inRoot
         with CD(self.inRoot): # We must change our own CWD because fabricate.py does not know how to extract the 'cwd' argument from the Popen kwargs.  If this ends up being a concurrency issue, i'll need to adjust fabricate.py to handle per-builder CWD.
             x = super(_Fab, self)._run(*args, **kwargs)
@@ -147,7 +157,9 @@ class _Mucker(object):
         return self._cmdsCache
     def getCommand(self, relPath):
         cmdsCache = self.getCommandsCache()
-        key = ' --> '.join((relPath, os.path.relpath(self.outRoot, self.inRoot)))
+        key = envString(extractUserMuckVars(os.environ))
+        if key: key += ' '
+        key += relPath + ' --> ' + os.path.relpath(self.outRoot, self.inRoot)
         if key not in cmdsCache:
             with CD(self.inRoot):
                 proc = subprocess.Popen([self.muckfilePath], env=childEnv(self.inRoot, relPath, self.outRoot), stdout=subprocess.PIPE)
