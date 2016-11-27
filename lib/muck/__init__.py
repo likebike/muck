@@ -12,6 +12,8 @@
 import os, sys, subprocess, json, atexit, stat
 import muck.fabricate
 
+DEBUG = int(os.environ.get('DEBUG','0'))    # Helps you understand why things are getting rebuilt.
+
 MUCKFILE = 'Muckfile'
 MUCKCMDS = '.muck_commands'
 MUCKDEPS = '.muck_deps'
@@ -130,7 +132,7 @@ class _Fab(muck.fabricate.Builder):
     def done(self, command, deps, output): return super(_Fab, self).done(self.muckCommand(command), deps, output)
 
 class _Mucker(object):
-    def __init__(self, inRoot, outRoot, debug=False):
+    def __init__(self, inRoot, outRoot, debug=DEBUG):
         assert os.path.isabs(inRoot)
         self.inRoot = inRoot
         self.muckfilePath = os.path.join(self.inRoot, MUCKFILE)
