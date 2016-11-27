@@ -6,13 +6,14 @@
 #     jumble craft transform metamorphose morph convert redo regen process trans glue tape
 #     haystack rummage weld muddle hunt process compile render conjure do invoke distill
 #     churn fudge publish remake instruct change cook cobble classify myke mike muck use
-#     abuse squander eat "Here, use this.  HUT" use uzit buse abuz
+#     abuse squander eat "Here, use this.  HUT" use uzit buse abuz buze
 
 
 import os, sys, subprocess, json, atexit, stat
 import muck.fabricate
 
 DEBUG = int(os.environ.get('DEBUG','0'))    # Helps you understand why things are getting rebuilt.
+DEPDIR = os.environ.get('DEPDIR', '/')      # Allows you to restrict dependency paths to improve performance.
 
 MUCKFILE = 'Muckfile'
 MUCKCMDS = '.muck_commands'
@@ -144,7 +145,7 @@ class _Mucker(object):
         self.outRoot = outRoot
         self.cmdsPath = os.path.join(inRoot, MUCKCMDS)
         self._cmdsCache = None
-        self.fab = _Fab(self.inRoot, ignore=r'^\.{1,2}$|^/(dev|proc|sys)/', dirs=['/'], depsname=os.path.join(inRoot, MUCKDEPS), quiet=True, debug=debug)  # ignore: . .. /dev/ /proc/ /sys/
+        self.fab = _Fab(self.inRoot, ignore=r'^\.{1,2}$|^/(dev|proc|sys)/', dirs=[DEPDIR], depsname=os.path.join(inRoot, MUCKDEPS), quiet=True, debug=debug)  # ignore: . .. /dev/ /proc/ /sys/
     def writeCommandsCache(self):
         if self._cmdsCache:
             with open(self.cmdsPath, 'w') as f: json.dump(self._cmdsCache, f, indent=2, sort_keys=True)
