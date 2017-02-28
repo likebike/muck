@@ -92,7 +92,10 @@ def FAIL(code):
 def muck_hasher(path):
     if not isinstance(path, bytes): path = path.encode('utf-8')
     try:
-        with open(path, 'rb') as f: return muck.fabricate.md5func(f.read()).hexdigest()
+        with open(path, 'rb') as f:
+            md5 = muck.fabricate.md5func()
+            for chunk in iter(lambda: f.read(1024*32), b""): md5.update(chunk)         #########################  Unlike fabricate.py, we read the file in chunks to avoid slurping huge files into memory.
+            return md5.hexdigest()
     except IOError:
         if hasattr(os, 'readlink') and os.path.islink(path):
             return muck.fabricate.md5func(os.readlink(path)).hexdigest()
