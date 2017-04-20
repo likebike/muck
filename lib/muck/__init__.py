@@ -148,7 +148,7 @@ class _Mucker(object):
         self.outRoot = outRoot
         self.cmdsPath = os.path.join(inRoot, MUCKCMDS)
         self._cmdsCache = None
-        self.fab = _Fab(self.inRoot, ignore=r'^\.{1,2}$|^/(dev|proc|sys)/', dirs=[DEPDIR], depsname=os.path.join(inRoot, MUCKDEPS), quiet=True, debug=debug)  # ignore: . .. /dev/ /proc/ /sys/
+        self.fab = _Fab(self.inRoot, ignore=r'^\.{1,2}$|^/(dev|proc|sys)/|\.db-shm$|\.db-wal$', dirs=[DEPDIR], depsname=os.path.join(inRoot, MUCKDEPS), quiet=True, debug=debug)  # ignore: . .. /dev/ /proc/ /sys/ , and ephemeral sqlite files.
     def writeCommandsCache(self):
         if self._cmdsCache:
             with open(self.cmdsPath, 'w') as f: json.dump(self._cmdsCache, f, indent=2, sort_keys=True)
