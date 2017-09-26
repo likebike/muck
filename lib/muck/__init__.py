@@ -151,7 +151,8 @@ class _Mucker(object):
         self.fab = _Fab(self.inRoot, ignore=r'^\.{1,2}$|^/(dev|proc|sys)/|\.db-shm$|\.db-wal$', dirs=[DEPDIR], depsname=os.path.join(inRoot, MUCKDEPS), quiet=True, debug=debug)  # ignore: . .. /dev/ /proc/ /sys/ , and ephemeral sqlite files.
     def writeCommandsCache(self):
         if self._cmdsCache:
-            with open(self.cmdsPath, 'w') as f: json.dump(self._cmdsCache, f, indent=2, sort_keys=True)
+            with open(self.cmdsPath+'.tmp', 'w') as f: json.dump(self._cmdsCache, f, indent=2, sort_keys=True)
+            os.rename(self.cmdsPath+'.tmp', self.cmdsPath)
             os.chmod(self.cmdsPath, stat.S_IRUSR|stat.S_IWUSR|stat.S_IRGRP|stat.S_IWGRP|stat.S_IROTH|stat.S_IWOTH)
     def getCommandsCache(self):
         if self._cmdsCache == None:
@@ -201,7 +202,7 @@ def build(inRoot, relPath, outRoot):
             if xRoot == xPath: return buildInfinity(xRoot, '.', copyPathTraversal(inRoot, xRoot, outRoot))
             assert xRoot == inRoot
         if os.path.islink(xPath) and os.path.isdir(xPath):
-            print >> sys.stderr, 'Directory symlinks are not yet supported:', xPath  # Need to handle infinite cycles and other crazy stuff.
+            print >> sys.stderr, 'Skipping muck processing of directory symlink:', xPath  # Need to handle infinite cycles and other crazy stuff.
             return
         if os.path.isdir(xPath):
             for x in sorted(os.listdir(xPath)):

@@ -1335,11 +1335,12 @@ class Builder(object):
         self.deps['.deps_version'] = deps_version
         if depsname is None:
             depsname = self.depsname
-        f = open(depsname, 'w')
+        f = open(depsname+'.tmp', 'w')                                                                          ###################  "+'.tmp'" Added by Christopher Sebastian
         try:
             json.dump(self.deps, f, indent=4, sort_keys=True)
         finally:
             f.close()
+            os.rename(depsname+'.tmp', depsname)                                                                ###################  Added by Christopher Sebastian
             os.chmod(depsname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IRGRP|stat.S_IWGRP|stat.S_IROTH|stat.S_IWOTH)   ###################  Added by Christopher Sebastian
             self._deps.pop('.deps_version', None)
 
