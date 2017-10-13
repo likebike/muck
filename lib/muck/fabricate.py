@@ -1335,15 +1335,12 @@ class Builder(object):
         self.deps['.deps_version'] = deps_version
         if depsname is None:
             depsname = self.depsname
-        f = open(depsname+'.tmp', 'w')                                                                          ###################  "+'.tmp'" Added by Christopher Sebastian
-        try:
-            json.dump(self.deps, f, indent=4, sort_keys=True)
-        finally:
-            f.close()
-            os.rename(depsname+'.tmp', depsname)                                                                ###################  Added by Christopher Sebastian
-            os.chmod(depsname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IRGRP|stat.S_IWGRP|stat.S_IROTH|stat.S_IWOTH)   ###################  Added by Christopher Sebastian
-            self._deps.pop('.deps_version', None)
-
+        try:                                                                                                    ######### Rewritten by Christopher Sebastian
+            with open(depsname+'.tmp', 'w') as f: json.dump(self.deps, f, indent=4, sort_keys=True)             ######### Rewritten by Christopher Sebastian
+            os.rename(depsname+'.tmp', depsname)                                                                ######### Rewritten by Christopher Sebastian
+            os.chmod(depsname, stat.S_IRUSR|stat.S_IWUSR|stat.S_IRGRP|stat.S_IWGRP|stat.S_IROTH|stat.S_IWOTH)   ######### Rewritten by Christopher Sebastian
+        finally:                                                                                                ######### Rewritten by Christopher Sebastian
+            self._deps.pop('.deps_version', None)                                                               ######### Rewritten by Christopher Sebastian
     _runner_map = {
         'atimes_runner' : AtimesRunner,
         'strace_runner' : StraceRunner,
