@@ -705,7 +705,7 @@ class StraceRunner(Runner):
                     if is_output:
                         processes[pid].add_output(name)
                     else:
-                        if getdents_match: name = ':MUCK_LISTDIR:%s'%(name)       ############   Added by Christopher Sebastian
+                        if getdents_match: name = '%s%s'%(MUCKLS,name)       ############   Added by Christopher Sebastian
                         processes[pid].add_dep(name)
 
         match = self._chdir_re.match(line)
@@ -993,6 +993,19 @@ def _results_handler( builder, delay=0.01):
             # Note: sys.exit() only kills me
             printerr("Error: unexpected results handler exit")
             os._exit(1)
+
+MUCKLS=':MUCK_LISTDIR:'                                                    ######  Added by Christopher Sebastian
+def cachePath(path):                                                       ######  Added by Christopher Sebastian
+    # Transform paths to a standard form before caching them               ######  Added by Christopher Sebastian
+    # to avoid double-hashing of the same item just because                ######  Added by Christopher Sebastian
+    # two things use different ways of referencing it.                     ######  Added by Christopher Sebastian
+    # I would love to use relative paths instead of absolute,              ######  Added by Christopher Sebastian
+    # but muck deals with recursive structures, and absolute               ######  Added by Christopher Sebastian
+    # paths are a simple solution for this situation.                      ######  Added by Christopher Sebastian
+    prefix=''                                                              ######  Added by Christopher Sebastian
+    if path.startswith(MUCKLS): prefix,path=MUCKLS,path[len(MUCKLS):]      ######  Added by Christopher Sebastian
+    return prefix+os.path.abspath(path)                                    ######  Added by Christopher Sebastian
+    
         
 class Builder(object):
     """ The Builder.
@@ -1180,6 +1193,7 @@ class Builder(object):
 
             # hash the dependency inputs and outputs
             for dep in deps:
+                dep=cachePath(dep)                             ################  Added by Christopher Sebastian
                 if dep in self.hash_cache:
                     # already hashed so don't repeat hashing work
                     hashed = self.hash_cache[dep]
@@ -1191,6 +1205,7 @@ class Builder(object):
                     self.hash_cache[dep] = hashed
 
             for output in outputs:
+                output=cachePath(output)                             ################  Added by Christopher Sebastian
                 hashed = self.hasher(output)
                 if hashed is not None:
                     deps_dict[output] = "output-" + hashed

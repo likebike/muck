@@ -2,6 +2,8 @@
 
 # Created by Christopher Sebastian, 2016-03-01
 
+# TODO: Make recursive muckers share a hash_cache, so we don't double-hash stuff.
+
 # Name brainstorm session:
 #     jumble craft transform metamorphose morph convert redo regen process trans glue tape
 #     haystack rummage weld muddle hunt process compile render conjure do invoke distill
@@ -13,7 +15,14 @@ import os, sys, subprocess, json, atexit, stat
 import muck.fabricate
 
 DEBUG = int(os.environ.get('DEBUG','0'))    # Helps you understand why things are getting rebuilt.
-DEPDIR = os.environ.get('DEPDIR', '/')      # Allows you to restrict dependency paths to improve performance.
+
+DEPDIRS = os.environ.get('DEPDIRS', '/').split(os.pathsep)  # Allows you to restrict dependency paths to improve performance.
+
+# Cache entries with these prefixes will only be hashed once, even if they change during the build.  I need this so database updates don't cause infinite build loops:
+VOLATILE_PREFIXES = [x for x in os.environ.get('VOLATILE_PREFIXES', '').split('|') if x]
+# Here are some example cache entries:
+#   /home/likebike/realFX/www/1-input/static/lib/MathJax-20170221/localization/sco/TeX.js
+#   :MUCK_LISTDIR:/home/likebike/realFX/www/3-output/dev/static/lib/MathJax-20170221/jax/output/HTML-CSS/fonts/Latin-Modern/Normal
 
 MUCKFILE = 'Muckfile'
 MUCKCMDS = '.muck_commands'
@@ -99,8 +108,8 @@ def muck_hasher(path):
     except IOError:
         if hasattr(os, 'readlink') and os.path.islink(path):
             return muck.fabricate.md5func(os.readlink(path)).hexdigest()
-        if path.startswith(':MUCK_LISTDIR:'):     #  Note that 'rsync' does a terrible job of syncing directory modification times -- it sets the dir mtime *before* descending into it, therefore if any contents get updated the synced dir mtime is lost.  Therefore, we can't just delegate this work over to mtime_hasher -- we need to use the directory listing for maximum reliability.
-            dirPath = path[len(':MUCK_LISTDIR:'):]
+        if path.startswith(muck.fabricate.MUCKLS):     #  Note that 'rsync' does a terrible job of syncing directory modification times -- it sets the dir mtime *before* descending into it, therefore if any contents get updated the synced dir mtime is lost.  Therefore, we can't just delegate this work over to mtime_hasher -- we need to use the directory listing for maximum reliability.
+            dirPath = path[len(muck.fabricate.MUCKLS):]
             try:
                 dirList = ' '.join(sorted(os.listdir(dirPath)))
                 return muck.fabricate.md5func(dirList).hexdigest()
@@ -148,7 +157,7 @@ class _Mucker(object):
         self.outRoot = outRoot
         self.cmdsPath = os.path.join(inRoot, MUCKCMDS)
         self._cmdsCache = None
-        self.fab = _Fab(self.inRoot, ignore=r'^\.{1,2}$|^/(dev|proc|sys)/|\.db-shm$|\.db-wal$', dirs=[DEPDIR], depsname=os.path.join(inRoot, MUCKDEPS), quiet=True, debug=debug)  # ignore: . .. /dev/ /proc/ /sys/ , and ephemeral sqlite files.
+        self.fab = _Fab(self.inRoot, ignore=r'^\.{1,2}$|^/(dev|proc|sys)/|\.db-shm$|\.db-wal$', dirs=DEPDIRS, depsname=os.path.join(inRoot, MUCKDEPS), quiet=True, debug=debug)  # ignore: . .. /dev/ /proc/ /sys/ , and ephemeral sqlite files.
     def writeCommandsCache(self):
         if self._cmdsCache:
             with open(self.cmdsPath+'.tmp', 'w') as f: json.dump(self._cmdsCache, f, indent=2, sort_keys=True)
@@ -214,15 +223,23 @@ def build(inRoot, relPath, outRoot):
 def buildInfinity(inRoot, relPath, outRoot, isTopLevel=False):
     global FAB_COUNT
     someWorkWasPerformed = False
-    # print >> sys.stderr, 'Starting:', os.path.join(inRoot, MUCKFILE)   # Due to the way that the 'infinity' process works, I do not show when we start a new root;  It would be confusing to users.
+    # print >> sys.stderr, 'Starting:', os.path.join(inRoot,MUCKFILE)   # Due to the way that the 'infinity' process works, I do not show when we start a new root;  It would be confusing to users.
     while True:
         startFabCount = FAB_COUNT
         if isTopLevel:   # Really, it's better to always reset each individual cache on each loop, rather than just at the top level, but I'm seeing if this can provide some performance boost while still being logically correct.
-            for n,m in _muckers.items(): m.fab.hash_cache = {}   # Reset all the caches so that changes get noticed.
+            for muckerRoot,m in _muckers.items():
+                oldCache = m.fab.hash_cache
+                m.fab.hash_cache = {}   # Reset all the caches so that changes get noticed.
+                for k,v in oldCache.items():
+                    for p in VOLATILE_PREFIXES:
+                        if k.startswith(p):
+                            if DEBUG: print >> sys.stderr, 'Re-using Volatile Hash:', k
+                            m.fab.hash_cache[k]=v   # Re-use the old hash to avoid re-hashing volatile items.
+                            break
         build(inRoot, relPath, outRoot)
         if FAB_COUNT==startFabCount: break
         someWorkWasPerformed = True
-    if someWorkWasPerformed: print >> sys.stderr, 'Done:', os.path.join(inRoot, MUCKFILE)
+    if someWorkWasPerformed: print >> sys.stderr, 'Done:', os.path.join(inRoot,MUCKFILE)
 
 def main():
     inPath = os.getcwd()
