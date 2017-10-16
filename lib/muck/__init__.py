@@ -2,7 +2,7 @@
 
 # Created by Christopher Sebastian, 2016-03-01
 
-# TODO: Make recursive muckers share a hash_cache, so we don't double-hash stuff.
+# TODO: Allow relative VOLATILE_PREFIXES as a convenience (resolve them to absolute).
 
 # Name brainstorm session:
 #     jumble craft transform metamorphose morph convert redo regen process trans glue tape
@@ -98,6 +98,16 @@ def FAIL(code):
     sys.exit(1)
 
 # Override some fabricate.py functionality:
+def isVolatile(path):
+    for p in VOLATILE_PREFIXES:
+        if path.startswith(p): return True
+    return False
+_volatile_cache={}
+def volatile_muck_hasher(path):  # Only hash volatile items once.
+    if isVolatile(path):
+        if path not in _volatile_cache: _volatile_cache[path]=muck_hasher(path)
+        return _volatile_cache[path]
+    return muck_hasher(path)
 def muck_hasher(path):
     if not isinstance(path, bytes): path = path.encode('utf-8')
     try:
@@ -123,7 +133,7 @@ class _Fab(muck.fabricate.Builder):
     def __init__(self, inRoot, *args, **kwargs):
         self.inRoot = inRoot
         kwargs['runner'] = 'strace_runner'      # Hard-code StraceRunner since I have never tested with anything else (and don't plan to).
-        kwargs['hasher'] = muck_hasher
+        kwargs['hasher'] = volatile_muck_hasher
         super(_Fab, self).__init__(*args, **kwargs)
         self.runner.build_dir = self.inRoot   # StraceRunner uses its build_dir for path chopping.
     def muckCommand(self, command): return envString(self.muckVars) + ' ' + command + ' ' + self.muckInput
@@ -227,15 +237,7 @@ def buildInfinity(inRoot, relPath, outRoot, isTopLevel=False):
     while True:
         startFabCount = FAB_COUNT
         if isTopLevel:   # Really, it's better to always reset each individual cache on each loop, rather than just at the top level, but I'm seeing if this can provide some performance boost while still being logically correct.
-            for muckerRoot,m in _muckers.items():
-                oldCache = m.fab.hash_cache
-                m.fab.hash_cache = {}   # Reset all the caches so that changes get noticed.
-                for k,v in oldCache.items():
-                    for p in VOLATILE_PREFIXES:
-                        if k.startswith(p):
-                            if DEBUG: print >> sys.stderr, 'Re-using Volatile Hash:', k
-                            m.fab.hash_cache[k]=v   # Re-use the old hash to avoid re-hashing volatile items.
-                            break
+            for muckerRoot,m in _muckers.items(): m.fab.hash_cache = {}   # Reset all the caches so that changes get noticed.
         build(inRoot, relPath, outRoot)
         if FAB_COUNT==startFabCount: break
         someWorkWasPerformed = True
