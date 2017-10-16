@@ -2,8 +2,6 @@
 
 # Created by Christopher Sebastian, 2016-03-01
 
-# TODO: Allow relative VOLATILE_PREFIXES as a convenience (resolve them to absolute).
-
 # Name brainstorm session:
 #     jumble craft transform metamorphose morph convert redo regen process trans glue tape
 #     haystack rummage weld muddle hunt process compile render conjure do invoke distill
@@ -19,7 +17,7 @@ DEBUG = int(os.environ.get('DEBUG','0'))    # Helps you understand why things ar
 DEPDIRS = os.environ.get('DEPDIRS', '/').split(os.pathsep)  # Allows you to restrict dependency paths to improve performance.
 
 # Cache entries with these prefixes will only be hashed once, even if they change during the build.  I need this so database updates don't cause infinite build loops:
-VOLATILE_PREFIXES = [x for x in os.environ.get('VOLATILE_PREFIXES', '').split('|') if x]
+VOLATILE_PREFIXES = [muck.fabricate.cachePath(x) for x in os.environ.get('VOLATILE_PREFIXES', '').split('|') if x]
 # Here are some example cache entries:
 #   /home/likebike/realFX/www/1-input/static/lib/MathJax-20170221/localization/sco/TeX.js
 #   :MUCK_LISTDIR:/home/likebike/realFX/www/3-output/dev/static/lib/MathJax-20170221/jax/output/HTML-CSS/fonts/Latin-Modern/Normal
