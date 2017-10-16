@@ -98,7 +98,9 @@ def FAIL(code):
 # Override some fabricate.py functionality:
 def isVolatile(path):
     for p in VOLATILE_PREFIXES:
-        if path.startswith(p): return True
+        if path.startswith(p):
+            if DEBUG: print >> sys.stderr, 'Volatile:',path
+            return True
     return False
 _volatile_cache={}
 def volatile_muck_hasher(path):  # Only hash volatile items once.
