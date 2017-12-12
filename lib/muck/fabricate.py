@@ -649,7 +649,7 @@ class StraceRunner(Runner):
                     processes[pid] = StraceProcess(processes[pid_clone].cwd)
             else:
                 # Some line processing was delayed due to an interupted clone_match
-                processes[pid].cwd = processes[pid_clone].cwd # Set the correct cwd
+                processes[pid].cwd = processes[pid_clone].cwd # Set the correct cwd   ### 2017-12-12: I got a KeyError on this line, apparently because 'pid_clone' was not in 'processes'.  Apparently, due to the delayed processing, we haven't found the creation of the new process yet.  I don't see an easy solution to this problem without rewriting the processing logic completely to be aware of future data.
                 processes[pid].delayed = False # Set that matching is no longer delayed
                 for delayed_line in processes[pid].delayed_lines:
                     # Process all the delayed lines
