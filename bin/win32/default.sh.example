@@ -1,0 +1,97 @@
+#!/bin/bash
+
+# This is a script that simply uses all the important parts of this "mini" MinGW
+# environment.  I use it as a sort of test to make sure the environment is
+# functioning properly, and it also helps me to get a list of all the necessary
+# pieces when I am building this environment (using ProcessMonitor).
+
+# Exit if there is an error:
+set -o errexit
+set -o nounset
+
+
+function fail {
+    CMD=$1
+    echo Failed:  $CMD
+    sleep 3
+    echo Press ENTER to Quit...
+    read
+    return 1
+}
+
+
+echo "=== mini_MinGW environment Test Script ==="
+echo PATH = $PATH
+echo EXEDIR = $EXEDIR
+echo STARTDIR = $STARTDIR
+
+sleep 1  ||  fail sleep
+echo sleep ... OK
+
+# Basic introspection:
+cat /bin/which > /dev/null  ||  fail cat
+echo cat ... OK
+ls > /dev/null  ||  fail ls
+echo ls ... OK
+which ls > /dev/null  ||  fail which
+echo which ... OK
+
+# Basic utilities:
+md5sum /bin/which > /dev/null  ||  fail md5sum
+echo md5sum ... OK
+md5sum /bin/which | cut -d' ' -f1 > /dev/null  ||  fail cut
+echo cut ... OK
+head --version > /dev/null  ||  fail head
+echo head ... OK
+tail --version > /dev/null  ||  fail tail
+echo tail ... OK
+less -V > /dev/null  ||  fail less
+echo less ... OK
+grep asinine /bin/which > /dev/null  ||  fail grep
+echo grep ... OK
+
+# File installation operations:
+rm -rf /delme  ||  fail rm
+echo rm ... OK
+mkdir -p /delme  ||  fail mkdir
+echo mkdir ... OK
+touch /delme/test1  ||  fail touch
+echo touch ... OK
+cp /delme/test1 /delme/test2  ||  fail cp
+echo cp ... OK
+
+# The 'test' command:
+if test "x$(md5sum /delme/test1 | cut -d' ' -f1)" = "x$(md5sum /delme/test2 | cut -d' ' -f1)"; then
+    echo 'test ... OK'
+else
+    fail 'test command'
+fi
+if [ "x$(md5sum /delme/test1 | cut -d' ' -f1)" = "x$(md5sum /delme/test2 | cut -d' ' -f1)" ]; then
+    echo 'test ( [ ] ) ... OK'
+else
+    fail 'test ( [ ] ) command'
+fi
+
+# Logic:
+true  ||  fail true
+echo true ... OK
+false  &&  fail false
+echo false ... OK
+
+# More advanced stuff:
+find /bin > /dev/null  ||  fail find
+echo find ... OK
+ssh -V > /dev/null 2>&1  ||  fail ssh
+echo ssh ... OK
+scp /delme/test2 /delme/test3  ||  fail scp
+echo scp ... OK
+curl http://google.com/ > /dev/null  ||  fail curl
+echo curl ... OK
+tar --help > /dev/null  ||  fail tar
+echo tar ... OK
+rsync --help > /dev/null  ||  fail rsync
+echo rsync ... OK
+
+rm -rf /delme
+echo 'All Tests Completed Successfully.  :)'
+sleep 10
