@@ -1,0 +1,13 @@
+
+# Clone the muck repo and switch to the website branch:
+git clone https://github.com/likebike/muck.git
+cd muck
+git checkout website
+
+# Install the muck and PyHPy tools to build the website:
+git clone https://github.com/likebike/muck.git
+git clone https://github.com/likebike/PyHPy.git
+
+# Build:
+make
+
