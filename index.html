@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>  <html class="no-js ie ie6 ie-lte9 ie-lte8 ie-lte7 ie-lte6" lang=en> <![endif]-->
+<!--[if IE 7]>     <html class="no-js ie ie7 ie-lte9 ie-lte8 ie-lte7" lang=en> <![endif]-->
+<!--[if IE 8]>     <html class="no-js ie ie8 ie-lte9 ie-lte8" lang=en> <![endif]-->
+<!--[if IE 9]>     <html class="no-js ie ie9 ie-lte9" lang=en> <![endif]-->
+<!--[if gt IE 9]>  <html class="no-js ie ie-gt9" lang=en> <![endif]-->
+<!--[if !IE]><!--> <html class="no-js not-ie" lang=en> <!--<![endif]-->
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="shortcut icon" type="image/vnd.microsoft.icon" href="/favicon.ico">
+    <title>PyHPy Demo</title>
+    <link rel="stylesheet" type="text/css" href="/static/lib/yui-3.12.0/reset_base_fonts-min.css">
+    <link rel="stylesheet" type="text/css" href="/static/lib/font-awesome-4.5.0/css/font-awesome.css">
+    <link rel="stylesheet" type="text/css" href="/static/css/github-markdown.css?_=1567842210.83">
+    <link rel="stylesheet" type="text/css" href="/static/css/base_pretty.css?_=1567842210.83">
+    
+    <link rel="stylesheet" type="text/css" href="/static/css/muck.css?_=1567842210.83">
+    <link rel="stylesheet" type="text/css" href="/static/css/home.css?_=1568057322.4">
+
+    <script type="text/javascript" src="/static/lib/jquery-1.10.2/jquery.js"></script>
+    <script type="text/javascript" src="/static/lib/underscore-1.5.2/underscore.js"></script>
+    <script type="text/javascript">
+      jQuery.noConflict();
+    </script>
+    <script type="text/javascript" src="/static/js/base_pretty.js?_=1567842210.83"></script>
+    
+  </head>
+  <body>
+
+    <a href="https://github.com/likebike/muck" class="github-corner" aria-label="View source on GitHub"><svg width="80" height="80" viewBox="0 0 250 250" style="fill:#151513; color:#fff; position: absolute; top: 0; border: 0; right: 0;" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a><style>.github-corner:hover .octo-arm{animation:octocat-wave 560ms ease-in-out}@keyframes octocat-wave{0%,100%{transform:rotate(0)}20%,60%{transform:rotate(-25deg)}40%,80%{transform:rotate(10deg)}}@media (max-width:500px){.github-corner:hover .octo-arm{animation:none}.github-corner .octo-arm{animation:octocat-wave 560ms ease-in-out}}</style>
+
+    <section id=header>
+      <a id=logo href="/index.html"><div class=asciiLogo>
+            ____ 
+           /\  __\_ 
+          /  \/ \___\ 
+          \     /___/ 
+       /\_/     \    \ 
+      /          \____\ 
+  ___/\       _  /    / 
+ / \/  \     /_\/____/ 
+ \     /     \___\ 
+ /     \_/\  /   / 
+/          \/___/ 
+\  _       /   / 
+ \/_|     /___/ 
+    /     \___\ 
+    \  /\_/___/ 
+     \/___/ 
+</div> <div class=name>Muck</div></a>
+      <div id=slogan>loves jigsaw puzzles &amp; IKEA furniture</div>
+      <div class=vspacer></div>
+      <hr>
+    </section>
+    <section id=content>
+      <article class="markdown-body"><p><code>muck</code> is a general-purpose build tool, sort of like <a href="https://www.gnu.org/software/make/">make</a>, but with a different design philosophy:&nbsp; <code>make</code> is "top-down" (you specify the high-level target you want to build, and <code>make</code> gathers and assembles the necessary pieces), <code>muck</code> is "bottom-up" (it looks at the available pieces, and figures out what can be built with them).&nbsp; The Muck model enables automatic discovery of dependencies, and also enables you to write Muckfiles in <em>any</em> programming language.</p>
+<p><code>muck</code> is based on <a href="https://github.com/brushtechnology/fabricate">Fabricate</a>.&nbsp; It uses <code>strace</code> to monitor execution and extract dependency information.</p>
+<h3>Example Muckfile</h3>
+<pre><code>#!/usr/bin/env python
+
+# Muckfiles can be written in any language.  They just need to print shell commands to stdout.
+#
+# Muck provides a few environment variables as inputs:
+#
+#     MUCK_IN_ROOT   -- The input root directory.  Example:  /path/to/proj/in
+#     MUCK_OUT_ROOT  -- The output root directory. Example:  /path/to/proj/out
+#     MUCK_REL_PATH  -- The file to process, relative to the MUCK_IN_ROOT.  Ex: a/b.c
+#
+# Muckfiles should be &quot;functional&quot;;  For the same set of inputs (env vars),
+# they should always produce the same set of outputs (shell commands).
+
+import os, sys
+from fnmatch import fnmatch
+
+# Pre-calculate a few things to make our command recipes simpler:
+relPath = os.environ['MUCK_REL_PATH']
+filename = os.path.basename(relPath)
+inRoot, outRoot = os.environ['MUCK_IN_ROOT'], os.environ['MUCK_OUT_ROOT']
+inPath  = os.path.join(inRoot,  os.environ['MUCK_REL_PATH'])
+outPath = os.path.join(outRoot, os.environ['MUCK_REL_PATH'])
+inDir, outDir = os.path.dirname(inPath), os.path.dirname(outPath)
+
+def end(string=None):
+    if string: print(string)
+    sys.exit()
+
+def mk_outdir(): print('''
+{ set +x; } 2&gt;/dev/null  # Silently disable tracing
+mkdir -p %(outDir)r
+set -x                   # Re-enable tracing
+'''%globals())
+
+def SKIP(verbose=False):
+    if verbose: print &gt;&gt;sys.stderr, 'Skipping:', relPath
+    sys.exit()
+
+def ENTER_SUBDIR(): end('''
+{ set +x; } 2&gt;/dev/null  # Silently disable tracing
+true                     # The command doesn't actually matter, as long as it succeeds.
+echo DIR DONE: $MUCK_REL_PATH/
+find . &gt;/dev/null        # So we re-visit this dir if any content changes.
+''')
+
+def COPY():
+    mk_outdir()
+    end('cp --preserve=all %(inPath)r %(outPath)r'%globals())
+
+def MAKO():
+    noext, ext = os.path.splitext(relPath)    # Chop off the .mako extension.
+    assert ext == '.mako'
+    values = {'noext':noext}; values.update(globals())
+    mk_outdir()
+    end('python -m pyhpy.cmd --template-dir=%(inRoot)r --module-dir=%(inRoot)r /%(relPath)r &gt;%(noext)r'%values)
+
+def MARKDOWN(): end('../PyHPy/bin/MARKDOWN')
+
+
+
+if fnmatch(filename, '_*'):           SKIP()
+if os.path.isdir(relPath):            ENTER_SUBDIR()
+
+
+# A simple way to enable building of specific items (for improved development iteration time):
+for pat in os.environ.get('MUCK_REL_PATH_PREFIXES', '').split('|'):   # If the env var is not set, the resulting 'pat' will be '', which matches everything.
+    if relPath.startswith(pat): break
+else: SKIP(True)
+
+
+if fnmatch(filename, '.*'):           SKIP()
+if fnmatch(filename, '*.meta'):       SKIP()
+if fnmatch(filename, '*.pyc'):        SKIP()
+if fnmatch(filename, '*.mako.py'):    SKIP()  # Mako-generated module
+if fnmatch(filename, '*.mako'):       MAKO()
+if fnmatch(filename, '*.md'):         MARKDOWN()
+if fnmatch(filename, '*'):            COPY()  # Default processor
+</code></pre>
+
+<h3>Usage</h3>
+<pre><code>muck IN_DIR OUT_DIR
+</code></pre>
+<h3>Questions?</h3>
+<p>If you have questions, send them to <a href="mailto:csebastian3@gmail.com">Christopher Sebastian</a>.</p></article>
+    </section>
+    <section id=footer>
+      <hr>
+      ©2016 你好世界
+    </section>
+  </body>
+</html>
+
+
+
+
+
+
+
