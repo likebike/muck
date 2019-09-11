@@ -55,8 +55,8 @@
     </section>
     <section id=content>
       <article class="markdown-body"><p><code>muck</code> is a general-purpose build tool, sort of like <a href="https://www.gnu.org/software/make/">make</a>, but with a different design philosophy:&nbsp; <code>make</code> is "top-down" (you specify the high-level target you want to build, and <code>make</code> gathers and assembles the necessary pieces), <code>muck</code> is "bottom-up" (it looks at the available pieces, and figures out what can be built with them).&nbsp; The Muck model enables automatic discovery of dependencies, and also enables you to write Muckfiles in <em>any</em> programming language.</p>
+<p><code>muck</code> excels in situations where dependencies are numerous, dynamic, or difficult-to-know.&nbsp; (A good example of this situation is static websites.)</p>
 <p><code>muck</code> is based on <a href="https://github.com/brushtechnology/fabricate">Fabricate</a>.&nbsp; It uses <code>strace</code> to monitor execution and extract dependency information.</p>
-<p><code>muck</code> excels in situations where dependencies are numerous or difficult-to-know.&nbsp; (A good example of this situation is static websites.)</p>
 <h3>Example Muckfile</h3>
 <p>Here is a very simple exmple, so that you can easily compare Makefiles vs Muckfiles:</p>
 <pre><code>#!/usr/bin/env python3
