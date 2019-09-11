@@ -27,9 +27,31 @@
 
 `muck` is a general-purpose build tool, sort of like [make](https://www.gnu.org/software/make/), but with a different design philosophy:  `make` is "top-down" (you specify the high-level target you want to build, and `make` gathers and assembles the necessary pieces), `muck` is "bottom-up" (it looks at the available pieces, and figures out what can be built with them).  The Muck model enables automatic discovery of dependencies, and also enables you to write Muckfiles in *any* programming language.
 
+`muck` excels in situations where dependencies are numerous, dynamic, or difficult-to-know.  (A good example of this situation is static websites.)
+
 `muck` is based on [Fabricate](https://github.com/brushtechnology/fabricate).  It uses `strace` to monitor execution and extract dependency information.
 
+
 === Example Muckfile ===
+
+Here is a very simple exmple, so that you can easily compare Makefiles vs Muckfiles:
+
+```
+#!/usr/bin/env python3
+
+# This Muckfile will do the same thing as this Makefile:
+# (Notice that the Makefile needs to list the .h files,
+#  while the Muckfile does not.)
+#
+# mycmd: a.c b.c a.h b.h c.h d.h
+#     gcc -o mycmd a.c b.c -I.
+
+import os
+
+if os.environ['MUCK_REL_PATH']=='a.c': print('gcc -o mycmd a.c b.c -I.')
+```
+
+Here is a more realistic example, used for building static websites:
 
 ```
 #!/usr/bin/env python
