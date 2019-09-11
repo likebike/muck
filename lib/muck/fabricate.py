@@ -514,7 +514,7 @@ class StraceRunner(Runner):
             return None
         possible_system_calls = ['open','stat', 'stat64', 'lstat', 'lstat64',
             'execve','exit_group','chdir','mkdir','rename','clone','vfork',
-            'fork','symlink','creat','getdents']                   ###################  Edited by Christopher Sebastian: added 'getdents'.
+            'fork','symlink','creat','getdents','openat']                   ###################  Edited by Christopher Sebastian: added getdents & openat.
         valid_system_calls = []
         try:
             # check strace is installed and if it supports each type of call
@@ -524,12 +524,14 @@ class StraceRunner(Runner):
                 proc.wait()
                 if b'invalid system call' not in stderr:
                    valid_system_calls.append(system_call)
+                else: print('Invalid strace syscall:',system_call, file=sys.stderr)        ###########################  Added by Christopher Sebastian
         except OSError:
             return None
         return ','.join(valid_system_calls)
 
     # Regular expressions for parsing of strace log
     _getdents_re   = re.compile(r'(?P<pid>\d+)\s+getdents\(\d+<(?P<name>[^>]*)>, .*')        ##########  Added by Christopher Sebastian.  Typical line we're trying to match: 4206  getdents(4</usr/local/lib/python2.7/dist-packages>, /* 2 entries */, 32768) = 48
+    _openat_re     = re.compile(r'(?P<pid>\d+)\s+openat\(AT_FDCWD, "(?P<name>[^"]*)", (?P<mode>[^,)]*)')      ##########  Added by Christopher Sebastian.  Typical line we're trying to match: openat(AT_FDCWD, "/home/user/tmp/github.com/muck/2-buildarea/index.html.md", O_RDONLY) = 3     #### Note that we don't currently attempt to support dir file descriptors, we only handle the AT_FDCWD special case.
     _open_re       = re.compile(r'(?P<pid>\d+)\s+open\("(?P<name>[^"]*)", (?P<mode>[^,)]*)')
     _stat_re       = re.compile(r'(?P<pid>\d+)\s+l?stat(?:64)?\("(?P<name>[^"]*)", .*') # stat,lstat,stat64,lstat64
     _execve_re     = re.compile(r'(?P<pid>\d+)\s+execve\("(?P<name>[^"]*)", .*')
@@ -605,6 +607,7 @@ class StraceRunner(Runner):
         is_output = False
         getdents_match = self._getdents_re.match(line)     ############  Added by Christopher Sebastian
         open_match = self._open_re.match(line)
+        if not open_match: open_match = self._openat_re.match(line)    #### Added by Christopher Sebastian
         stat_match = self._stat_re.match(line)
         execve_match = self._execve_re.match(line)
         creat_match = self._creat_re.match(line)

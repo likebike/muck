@@ -200,7 +200,7 @@ class _Mucker(object):
     def run(self, relPath):
         cmd = self.getCommand(relPath)
         if not cmd: return
-        try: self.fab.run(['/bin/sh', '-euxs'],
+        try: self.fab.run(['/bin/bash', '-euxs'],
                           # cwd=self.inRoot,  # I do not send 'cwd' because fabricate.py doesn't know how to deal with it, and all the strace-detected paths get messed up.  I do some tricks in _Fab to compensate for this.
                           env=childEnv(self.inRoot, relPath, self.outRoot),
                           input=cmd)   # Send our command to stdin.
@@ -221,8 +221,9 @@ def build(inRoot, relPath, outRoot):
             if xRoot == xPath: return buildInfinity(xRoot, '.', copyPathTraversal(inRoot, xRoot, outRoot))
             assert xRoot == inRoot
         if os.path.islink(xPath) and os.path.isdir(xPath):
-            print >> sys.stderr, 'Skipping muck processing of directory symlink:', xPath  # Need to handle infinite cycles and other crazy stuff.
-            return
+            print >> sys.stderr, 'Warning: Processing directory symlink (I trust you):', xPath # 2019-09-07: Just trust the user:
+        #   print >> sys.stderr, 'Skipping muck processing of directory symlink:', xPath  # Need to handle infinite cycles and other crazy stuff.
+        #   return
         if os.path.isdir(xPath):
             for x in sorted(os.listdir(xPath)):
                 if relPath == '.'  and  x in [MUCKFILE, MUCKCMDS, MUCKDEPS]: continue  # Ignore Muck-related files.
