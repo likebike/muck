@@ -12,18 +12,18 @@
     <title>PyHPy Demo</title>
     <link rel="stylesheet" type="text/css" href="/static/lib/yui-3.12.0/reset_base_fonts-min.css">
     <link rel="stylesheet" type="text/css" href="/static/lib/font-awesome-4.5.0/css/font-awesome.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/github-markdown.css?_=1567842210.83">
-    <link rel="stylesheet" type="text/css" href="/static/css/base_pretty.css?_=1567842210.83">
+    <link rel="stylesheet" type="text/css" href="/static/css/github-markdown.css?_=1568196246.37">
+    <link rel="stylesheet" type="text/css" href="/static/css/base_pretty.css?_=1568196246.37">
     
-    <link rel="stylesheet" type="text/css" href="/static/css/muck.css?_=1567842210.83">
-    <link rel="stylesheet" type="text/css" href="/static/css/home.css?_=1568057322.4">
+    <link rel="stylesheet" type="text/css" href="/static/css/muck.css?_=1568196246.37">
+    <link rel="stylesheet" type="text/css" href="/static/css/home.css?_=1568196246.37">
 
     <script type="text/javascript" src="/static/lib/jquery-1.10.2/jquery.js"></script>
     <script type="text/javascript" src="/static/lib/underscore-1.5.2/underscore.js"></script>
     <script type="text/javascript">
       jQuery.noConflict();
     </script>
-    <script type="text/javascript" src="/static/js/base_pretty.js?_=1567842210.83"></script>
+    <script type="text/javascript" src="/static/js/base_pretty.js?_=1568196246.37"></script>
     
   </head>
   <body>
@@ -56,7 +56,24 @@
     <section id=content>
       <article class="markdown-body"><p><code>muck</code> is a general-purpose build tool, sort of like <a href="https://www.gnu.org/software/make/">make</a>, but with a different design philosophy:&nbsp; <code>make</code> is "top-down" (you specify the high-level target you want to build, and <code>make</code> gathers and assembles the necessary pieces), <code>muck</code> is "bottom-up" (it looks at the available pieces, and figures out what can be built with them).&nbsp; The Muck model enables automatic discovery of dependencies, and also enables you to write Muckfiles in <em>any</em> programming language.</p>
 <p><code>muck</code> is based on <a href="https://github.com/brushtechnology/fabricate">Fabricate</a>.&nbsp; It uses <code>strace</code> to monitor execution and extract dependency information.</p>
+<p><code>muck</code> excels in situations where dependencies are numerous or difficult-to-know.&nbsp; (A good example of this situation is static websites.)</p>
 <h3>Example Muckfile</h3>
+<p>Here is a very simple exmple, so that you can easily compare Makefiles vs Muckfiles:</p>
+<pre><code>#!/usr/bin/env python3
+
+# This Muckfile will do the same thing as this Makefile:
+# (Notice that the Makefile needs to list the .h files,
+#  while the Muckfile does not.)
+#
+# mycmd: a.c b.c a.h b.h c.h d.h
+#     gcc -o mycmd a.c b.c -I.
+
+import os
+
+if os.environ['MUCK_REL_PATH']=='a.c': print('gcc -o mycmd a.c b.c -I.')
+</code></pre>
+
+<p>Here is a more advanced (and more realistic) example, used for building of static websites:</p>
 <pre><code>#!/usr/bin/env python
 
 # Muckfiles can be written in any language.  They just need to print shell commands to stdout.
