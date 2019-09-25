@@ -1,0 +1,20 @@
+a#logo div.name {
+    color: #2D64A3;
+}
+a#logo div.asciiLogo {
+    margin-top: -40px;
+}
+ul#headerTabs li a {
+    color: #dee4e5;
+}
+ul#headerTabs li.selected {
+    background-color: #2D64A3;
+}
+section#header hr {
+    border: 5px solid #dee4e5;
+}
+section#footer {
+    background-color: #dee4e5;
+    color: #2D64A3;
+}
+
