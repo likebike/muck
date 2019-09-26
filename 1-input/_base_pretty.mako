@@ -38,7 +38,7 @@
 ##     ${context.lookup.get_template('db.json.mako').render_unicode().strip()}
 ##
 ##     ### PyHPy Provides the Following Convenience Features ###
-##     self.URL('/blog.html')   --  Includes a "?timeout=${FS mtime}" in the URL.
+##     self.URL('/blog.html')   --  Includes a "?_=${FS mtime}" in the URL.
 ##     self.URL()               --  Returns the project path of the template being rendered.
 ##                                  If /a/b/buildDir/x/y/z.mako is being rendered,
 ##                                  self.URL() --> /x/y/z.mako
@@ -60,7 +60,7 @@
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <link rel="shortcut icon" type="image/vnd.microsoft.icon" href="/favicon.ico">
-    <title><%block name="TITLE">PyHPy Demo</%block></title>
+    <title><%block name="TITLE">Muck</%block></title>
     <link rel="stylesheet" type="text/css" href="/static/lib/yui-3.12.0/reset_base_fonts-min.css">
     <link rel="stylesheet" type="text/css" href="/static/lib/font-awesome-4.5.0/css/font-awesome.css">
     <link rel="stylesheet" type="text/css" href="${pyhpy.url('/static/css/github-markdown.css')}">
@@ -138,7 +138,7 @@ Y^|   |      |~~7
     </section>
     <section id=footer>
       <hr>
-      ©2016 你好世界
+      🄯2016 你好世界
     </section>
   </body>
 </html>
