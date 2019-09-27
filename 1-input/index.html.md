@@ -138,7 +138,3 @@ if fnmatch(filename, '*'):            COPY()  # Default processor
 
     muck IN_DIR OUT_DIR
 
-=== Questions? ===
-
-If you have questions, send them to [Christopher Sebastian](mailto:csebastian3@gmail.com).
-
