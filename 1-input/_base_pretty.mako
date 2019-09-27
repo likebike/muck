@@ -138,7 +138,7 @@ Y^|   |      |~~7
     </section>
     <section id=footer>
       <hr>
-      🄯 2016
+      🄯 2016 <a href="http://likebike.com/">Christopher Sebastian</a>
     </section>
   </body>
 </html>
