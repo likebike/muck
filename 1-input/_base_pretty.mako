@@ -138,7 +138,7 @@ Y^|   |      |~~7
     </section>
     <section id=footer>
       <hr>
-      🄯2016 你好世界
+      🄯 2016
     </section>
   </body>
 </html>
